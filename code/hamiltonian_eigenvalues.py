@@ -8,58 +8,52 @@ Created on Wed Nov  9 16:03:50 2016
 import numpy as np
 import matplotlib.pyplot as plt
 
-#number of iterations for averaging
-N_random = 100
-
-#standard deviation of random energy off-set [cm-1]
-E_sigma = 73
-
-H = []
-
-with open('hamiltonian.txt') as data_file:
-    data = data_file.readlines()
+def read_file_lt (filename):
+    """reads lower-triangular matrix from file"""
+    with open(filename) as data_file:
+        data = data_file.readlines()
+        
+    H_lt = [[float(value) for value in line.strip().split()] for line in data]
     
-H_lt = [[float(value) for value in line.strip().split()] for line in data]
-
-N = len(H_lt[-1])
-
-H = np.array([line+[0]*(N-len(line)) for line in H_lt])
+    N = len(H_lt[-1])
     
-E_disorderless, _ = np.linalg.eigh (H)
-
-print ("Eigenvalues:", E_disorderless)
-
+    H = np.array([line+[0]*(N-len(line)) for line in H_lt])
+    return H
 
 def gaussian (x, mu=0, sigma=1.0):
-    """
-    Normalized Gaussian function
-    """
+    """Normalized Gaussian function"""
     return np.exp(-np.power(x-mu,2.0) / (2 * np.power(sigma, 2))) / (sigma * np.sqrt(2.0 * np.pi))
     
 def density_of_states (E, ensemble, delta):
-    """
-    Density of ensemble E values, obtained by using given delta function
-    """
+    """Density of ensemble E values, obtained by using given delta function"""
     return np.sum([delta(E-e) for e in ensemble])/len(ensemble)
     
-E_ensemble = []
-
-for _ in range(N_random):
-    E_ensemble = np.concatenate((E_ensemble, np.linalg.eigh(H + np.diag(np.random.normal(0, E_sigma, N)))[0]))
+def energies_hamiltonian_disorder (H, iterations = 500, E_sigma = 73):
+    """Density of states of given Hamiltonian and Gaussian disorder"""
+    N = len(H[-1])    
     
-E = np.linspace(14500.0, 15500, num=100)
-# Probability density
-E_pdensity = [probability_density(x, E_ensemble, lambda x: gaussian(x, 0, 10.0)) for x in E]
-# Energy histogram
-E_histogram = np.histogram(E_ensemble, 20, normed=True)
-width = E_histogram[1][1]-E_histogram[1][0]
+    E_disorderless, _ = np.linalg.eigh (H)
+    
+    E = []
+    
+    for _ in range(iterations):
+        E = np.concatenate((E, np.linalg.eigh(H + np.diag(np.random.normal(0, E_sigma, N)))[0]))
+    
+    return E
 
-
-plt.figure('Energy distribution density')
-plt.bar(E_histogram[1][:-1]-width/2.0, E_histogram[0], width=width*0.9, edgecolor='none')
-plt.plot(E, E_pdensity, 'r-')
-plt.xlabel (r'Energy $E$, cm$^{-1}$')
-plt.ylabel (r'Density of states $P(E)$')
-plt.legend(['density of states', 'histogram'])
+if __name__ == '__main__':
+    
+    H = read_file_lt ("hamiltonian.txt")
+    
+    E_ensemble = energies_hamiltonian_disorder (H);
+        
+    E = np.linspace(14500.0, 15500, num=100)
+    E_pdensity = [density_of_states(x, E_ensemble, lambda x: gaussian(x, 0, 40.0)) for x in E]
+    
+    
+    plt.figure('Energy distribution density')
+    plt.plot(E, E_pdensity, 'r-')
+    plt.xlabel (r'Energy $E$, cm$^{-1}$')
+    plt.ylabel (r'Density of states $P(E)$')
 
 
