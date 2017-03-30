@@ -1,0 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Nov 21 19:42:34 2016
+
+@author: butkus
+"""
+
+import scipy.linalg 
